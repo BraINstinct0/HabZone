@@ -9,14 +9,9 @@ from collections import defaultdict
 import requests
 import sys
 import threading
-try:
-    # Python 2
-    from urllib2 import quote
-    import Tkinter as tk
-except ModuleNotFoundError:
-    # Python 3
-    from urllib.parse import quote
-    import tkinter as tk
+# Python 2 deprecated
+from urllib.parse import quote
+import tkinter as tk
 
 from ttkHyperlinkLabel import HyperlinkLabel
 import myNotebook as nb
@@ -27,7 +22,7 @@ if __debug__:
 from config import config
 from l10n import Locale
 
-VERSION = '1.20'
+VERSION = '1.21'
 
 SETTING_DEFAULT = 0x0002	# Earth-like
 SETTING_EDSM    = 0x1000
@@ -42,6 +37,14 @@ WORLDS = [
     ('Class II Giant', 250.0, 150.0, 'Class II gas giant'),
     ('Terraformable', 315.0, 223.0, 'terraformable'),
 ]
+# Journal planet type to EDSM planet type
+JRNL2TYPE = {
+    'Earthlike body':'Earth-like world',
+    'Water world':'Water world',
+    'Ammonia world':'Ammonia world',
+    'Metal rich body':'Metal-rich body',
+    'Sudarsky class II gas giant':'Class II gas giant'
+}
 
 LS = 300000000.0	# 1 ls in m (approx)
 
@@ -147,16 +150,11 @@ def journal_entry(cmdr, is_beta, system, station, entry, state):
                 body_type = None
                 if entry.get('TerraformState') == 'Terraformable':
                     body_type = 'terraformable'
-                elif entry.get('PlanetClass') == 'Earthlike body':
-                    body_type = 'Earth-like world'
-                elif entry.get('PlanetClass') == 'Water world':
-                    body_type = 'Water world'
-                elif entry.get('PlanetClass') == 'Ammonia world':
-                    body_type = 'Ammonia world'
-                elif entry.get('PlanetClass') == 'Metal rich body':
-                    body_type = 'Metal-rich body'
-                elif entry.get('PlanetClass') == 'Sudarsky class II gas giant':
-                    body_type = 'Class II gas giant'
+                else:
+                    try:
+                        body_type = JRNL2TYPE[entry.get('PlanetClass')]
+                    except:
+                        pass
                 if body_type:
                     data = this.scanned_worlds['bodies'].get(entry.get('BodyName'), {})
                     data.update({'type': body_type, 'was_mapped': mapped})
@@ -257,15 +255,10 @@ def edsm_data(event):
 
     # Collate
     for body in this.edsm_data.get('bodies', []):
-        if body.get('terraformingState') == 'Candidate for terraforming':
-            data = this.scanned_worlds['bodies'].get(body['name'], {})
-            data.update({'type': 'terraformable'})
-            this.scanned_worlds['bodies'][body['name']] = data
-        else:
-            data = this.scanned_worlds['bodies'].get(body['name'], {})
-            data.update({'type': body['subType']})
-            this.scanned_worlds['bodies'][body['name']] = data
-
+        data = this.scanned_worlds['bodies'].get(body['name'], {})
+        data.update({'type': ('terraformable' if (body.get('terraformingState') == 'Candidate for terraforming') else body['subType'])})
+        this.scanned_worlds['bodies'][body['name']] = data
+    
     # Display
     systemName = this.edsm_data.get('name', '')
     url = 'https://www.edsm.net/show-system?systemName=%s&bodyName=ALL' % quote(systemName)
@@ -298,12 +291,7 @@ def update_visibility():
             far.grid(row = row, column = 4, sticky=tk.E)
             ls.grid(row = row, column = 5, sticky=tk.W)
         else:
-            label.grid_remove()
-            edsm.grid_remove()
-            near.grid_remove()
-            dash.grid_remove()
-            far.grid_remove()
-            ls.grid_remove()
+            elem.grid_remove() for elem in (label, edsm, near, dash, far, ls)
         row *= 2
     if setting:
         this.spacer.grid_remove()
