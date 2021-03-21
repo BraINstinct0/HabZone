@@ -22,7 +22,7 @@ if __debug__:
 from config import config
 from l10n import Locale
 
-VERSION = '1.21'
+VERSION = '1.20'
 
 SETTING_DEFAULT = 0x0002	# Earth-like
 SETTING_EDSM    = 0x1000
@@ -291,7 +291,9 @@ def update_visibility():
             far.grid(row = row, column = 4, sticky=tk.E)
             ls.grid(row = row, column = 5, sticky=tk.W)
         else:
-            elem.grid_remove() for elem in (label, edsm, near, dash, far, ls)
+            for elem in (label, edsm, near, dash, far, ls):
+                elem.grid_remove()
+                              
         row *= 2
     if setting:
         this.spacer.grid_remove()
